@@ -31,15 +31,15 @@ public class Product {
         this.name = name;
     }
 
-    Integer getId() {
+    public Integer getId() {
         return id;
     }
 
-    String getName() {
+    public String getName() {
         return name;
     }
 
-    void setName(String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
@@ -49,6 +49,10 @@ public class Product {
 
     public void removeReview(Review review){
         reviews.remove(review);
+    }
+
+    public Set<Review> getReviews() {
+        return reviews;
     }
 
     @Override

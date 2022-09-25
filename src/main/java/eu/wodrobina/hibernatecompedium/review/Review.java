@@ -21,11 +21,11 @@ public class Review {
         this.text = text;
     }
 
-    Integer getId() {
+    public Integer getId() {
         return id;
     }
 
-    String getText() {
+    public String getText() {
         return text;
     }
 

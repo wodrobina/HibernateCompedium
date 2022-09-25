@@ -2,7 +2,7 @@
 
 Document is on [post](https://vladmihalcea.com/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/) which shows the different ways of mapping `@oneToMany`. The entry does not cover all the possibilities of creating this type of relationship and the mode of operation, which I intend to expand in this document.
 
-In my examples, I will use the relationship between the entities `Product` and` Review`. At the outset, I assume ** a two-way relationship ** between objects where `Product` will be the dominant one.
+In my examples, I will use the relationship between the entities `Product` and` Review`.
 
 ## Product
 ### Class description

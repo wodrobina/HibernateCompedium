@@ -21,7 +21,7 @@ public class Product {
 
     private String name;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     private Set<Review> reviews = new HashSet<>();
 
     protected Product() {

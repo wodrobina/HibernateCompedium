@@ -159,7 +159,7 @@ public class Review {
 ```
 
 #J PA Behavior Tests for various annotations and settings
-## Test code
+## Test code - unidirectional
 ```java
     @Test
     @Transactional
@@ -174,6 +174,8 @@ public class Review {
         //THEN
         byId.get().getReviews()
             .forEach(Review::getText);
+            
+        assertThat(reviews).hasSize(3);
     }
 
     private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
@@ -198,7 +200,7 @@ public class Review {
 The test looks very complex, but in fact it creates three `Reviews` with text and writes in a dedicated thread and then we wait for the return of the saved entities from the database. The next step is to create a `Product` in a dedicated thread, additionally linking the already saved` Review` to the object. We wait for the return from the database, then we download the `Product` from the database and iterate through the` Review` it has when reading the text.
 Why did I use `CompletableFuture`? This is a way to bypass the JPA level 1 cache. If I hadn't, the results of my tests would not show all the queries because JPA would be accessing the cache instead of accessing the data.
 
-## Use `EAGER`
+## Use `EAGER` - unidirectional
 In the `Product` class, use the binding as below
 ```java
     @OneToMany(fetch = FetchType.EAGER)
@@ -248,7 +250,7 @@ Statistics
     6296147 nanoseconds spent executing 1 JDBC statements;
 ```
 
-## Use `LAZY`
+## Use `LAZY` - unidirectional
 
 In the `Product` class, use the binding as below
 ```java

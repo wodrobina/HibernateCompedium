@@ -1,7 +1,10 @@
 package eu.wodrobina.hibernatecompedium;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -46,8 +49,11 @@ class HibernateCompediumApplicationTests {
         Optional<Product> byId = productRepository.findById(product.getId());
 
         //THEN
-        byId.get().getReviews()
+        Set<Review> reviews = byId.get().getReviews();
+        reviews
             .forEach(Review::getText);
+
+        assertThat(reviews).hasSize(3);
     }
 
     private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {

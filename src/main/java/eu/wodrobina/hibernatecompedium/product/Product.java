@@ -8,6 +8,8 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 
 import eu.wodrobina.hibernatecompedium.review.Review;
@@ -22,6 +24,7 @@ public class Product {
     private String name;
 
     @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "product_id")
     private Set<Review> reviews = new HashSet<>();
 
     protected Product() {

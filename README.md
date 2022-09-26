@@ -14,7 +14,7 @@ A class that is widely understood as a reflection of a product or service in the
 - name - description of an item
 - reviews - these are reviews of a given product, one product may have multiple reviews
 
-The product is a unique entity, therefore the `equals` and` hashCode` methods have been implemented as suggested[Vlad Michalcea 
+The product is a unique entity, therefore the `equals` and` hashCode` methods have been implemented as suggested[Vlad Michalcea
 ](https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/).
 
 ### Basic implementation of entitity
@@ -84,9 +84,9 @@ public class Product {
 
 ```sql
     create table product (
-       id int4 not null,
-        name varchar(255),
-        primary key (id)
+                             id int4 not null,
+                             name varchar(255),
+                             primary key (id)
     )
 ```
 
@@ -152,9 +152,9 @@ public class Review {
 
 ```sql
     create table review (
-       id int4 not null,
-        text varchar(255),
-        primary key (id)
+                            id int4 not null,
+                            text varchar(255),
+                            primary key (id)
     )
 ```
 
@@ -162,45 +162,45 @@ public class Review {
 ## Test code - unidirectional
 ```java
     @Test
-    @Transactional
+@Transactional
     void test01() throws ExecutionException, InterruptedException {
         //GIVEN
         Iterable<Review> savedReviews = createReviews();
-        Product product = createProduct(savedReviews);
+    Product product = createProduct(savedReviews);
 
-        //WHEN
-        Optional<Product> byId = productRepository.findById(product.getId());
+    //WHEN
+    Optional<Product> byId = productRepository.findById(product.getId());
 
-        //THEN
-        byId.get().getReviews()
-            .forEach(Review::getText);
-            
-        assertThat(reviews).hasSize(3);
+    //THEN
+    byId.get().getReviews()
+    .forEach(Review::getText);
+
+    assertThat(reviews).hasSize(3);
     }
 
-    private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
-        return CompletableFuture.supplyAsync(() -> {
-                Product item = new Product("item");
-                savedReviews.forEach(item::addReview);
-                return productRepository.save(item);
-            }, executor)
-            .get();
+private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
+    return CompletableFuture.supplyAsync(() -> {
+    Product item = new Product("item");
+    savedReviews.forEach(item::addReview);
+    return productRepository.save(item);
+    }, executor)
+    .get();
     }
 
-    private Iterable<Review> createReviews() throws InterruptedException, ExecutionException {
-        return CompletableFuture.supplyAsync(() -> reviewRepository.saveAll(List.of(
-                new Review("first review"),
-                new Review("second review"),
-                new Review("third review")
-            )), executor)
-            .get();
+private Iterable<Review> createReviews() throws InterruptedException, ExecutionException {
+    return CompletableFuture.supplyAsync(() -> reviewRepository.saveAll(List.of(
+    new Review("first review"),
+    new Review("second review"),
+    new Review("third review")
+    )), executor)
+    .get();
     }
 ```
 
 The test looks very complex, but in fact it creates three `Reviews` with text and writes in a dedicated thread and then we wait for the return of the saved entities from the database. The next step is to create a `Product` in a dedicated thread, additionally linking the already saved` Review` to the object. We wait for the return from the database, then we download the `Product` from the database and iterate through the` Review` it has when reading the text.
 Why did I use `CompletableFuture`? This is a way to bypass the JPA level 1 cache. If I hadn't, the results of my tests would not show all the queries because JPA would be accessing the cache instead of accessing the data.
 
-## Use `EAGER` - unidirectional
+## Use `EAGER` - unidirectional with linking table
 In the `Product` class, use the binding as below
 ```java
     @OneToMany(fetch = FetchType.EAGER)
@@ -216,6 +216,36 @@ The sql code creates an additional join table
 ```
 
 ## Generated query
+We have 3x `review` creation as inserts
+
+```sql
+    insert 
+    into
+        review
+        (text, id) 
+    values
+        (?, ?)
+```
+Commit and then we create
+
+```sql
+    insert 
+    into
+        product
+        (name, id) 
+    values
+        (?, ?)
+```
+And **3** times we insert into lining table
+```sql
+    insert 
+    into
+        product_reviews
+        (product_id, reviews_id) 
+    values
+        (?, ?)
+```
+To select we use
 
 ```java
     select
@@ -242,7 +272,7 @@ Query is extensive. We still use the link table, which is completely redundant b
 
 This form of the query should have been expected because we explicitly declared that all data should be retrieved and that we would map it to the objects appropriately.
 
-Statistics 
+Statistics
 ```
     31851 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
@@ -250,7 +280,7 @@ Statistics
     6296147 nanoseconds spent executing 1 JDBC statements;
 ```
 
-## Use `LAZY` - unidirectional
+## Use `LAZY` - unidirectional with linking table
 
 In the `Product` class, use the binding as below
 ```java
@@ -299,5 +329,144 @@ Statistics
 ```
 
 ## Conclusion
-The result of calling query is as expected. It will be a bit more optimal because JPA tries to optimize the use of the database, and thus the minimum necessary amount of data was collected when searching for an object. This was the first query. Proxy objects have been created for the data marked as `LAZY`. 
+The result of calling query is as expected. It will be a bit more optimal because JPA tries to optimize the use of the database, and thus the minimum necessary amount of data was collected when searching for an object. This was the first query. Proxy objects have been created for the data marked as `LAZY`.
 The test is intentionally designed to force the download of lazy objects. It can be seen that another query is created to retrieve the missing `Review`. I do not focus on query execution time because this test is performed individually in a changing environment.
+
+
+## Use `EAGER` - unidirectional using join
+In the `Product` class, use the binding as below
+```java
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "review_id")
+```
+The sql code creates **additional column in related object**
+```sql
+    create table product_reviews (
+       product_id int4 not null,
+        reviews_id int4 not null,
+        primary key (product_id, reviews_id)
+    )
+```
+
+## Generated query
+
+When we create product and attach reviews on it it create's query
+
+```sql
+    insert 
+    into
+        product
+        (name, id) 
+    values
+        (?, ?)
+```
+And **3** times:
+```sql
+    update
+        review 
+    set
+        product_id=? 
+    where
+        id=?
+```
+Transaction is commited and then we have query
+
+```java
+    select
+        product0_.id as id1_0_0_,
+        product0_.name as name2_0_0_,
+        reviews1_.product_id as product_3_1_1_,
+        reviews1_.id as id1_1_1_,
+        reviews1_.id as id1_1_2_,
+        reviews1_.text as text2_1_2_ 
+    from
+        product product0_ 
+    left outer join
+        review reviews1_ 
+            on product0_.id=reviews1_.product_id 
+    where
+        product0_.id=?
+```
+
+## Conclusion
+Select is the same as when we used lining table. Difference is with missing linking table. This should inprove performace as we have one join less. Necessary data is stored on `Review` directly.
+Also on creatio of the `Product` we can see that we **update** `Review` not insert into linking table.
+
+Statistics
+```
+    25744 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    135102 nanoseconds spent preparing 1 JDBC statements;
+    224920536 nanoseconds spent executing 1 JDBC statements;
+```
+
+## Use `LAZY` - unidirectional using join
+In the `Product` class, use the binding as below
+```java
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "review_id")
+```
+The sql code creates **additional column in related object**
+```sql
+    create table product_reviews (
+       product_id int4 not null,
+        reviews_id int4 not null,
+        primary key (product_id, reviews_id)
+    )
+```
+
+## Generated query
+
+When we create product and attach reviews on it it create's query
+
+```sql
+    insert 
+    into
+        product
+        (name, id) 
+    values
+        (?, ?)
+```
+And **3** times:
+```sql
+    update
+        review 
+    set
+        product_id=? 
+    where
+        id=?
+```
+Transaction is commited and then we have query
+
+```java
+    select
+        product0_.id as id1_0_0_,
+        product0_.name as name2_0_0_ 
+    from
+        product product0_ 
+    where
+        product0_.id=?
+```
+```java
+    select
+        reviews0_.product_id as product_3_1_0_,
+        reviews0_.id as id1_1_0_,
+        reviews0_.id as id1_1_1_,
+        reviews0_.text as text2_1_1_ 
+    from
+        review reviews0_ 
+    where
+        reviews0_.product_id=?
+```
+
+## Conclusion
+Select is the same as when we used lining table. Difference is with missing linking table. This should inprove performace as we have one join less. Necessary data is stored on `Review` directly. To select `Product` and related objects we use two queries
+Also on creatio of the `Product` we can see that we **update** `Review` not insert into linking table.
+
+Statistics
+```
+    28093 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    194543 nanoseconds spent preparing 2 JDBC statements;
+    9282998 nanoseconds spent executing 2 JDBC statements;
+```

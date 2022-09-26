@@ -215,7 +215,7 @@ The sql code creates an additional join table
     )
 ```
 
-## Generatedd query
+## Generated query
 
 ```java
     select

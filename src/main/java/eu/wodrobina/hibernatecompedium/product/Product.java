@@ -23,7 +23,7 @@ public class Product {
 
     private String name;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Set<Review> reviews = new HashSet<>();
 

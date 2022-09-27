@@ -84,9 +84,9 @@ public class Product {
 
 ```sql
     create table product (
-                             id int4 not null,
-                             name varchar(255),
-                             primary key (id)
+       id int4 not null,
+        name varchar(255),
+        primary key (id)
     )
 ```
 
@@ -152,9 +152,9 @@ public class Review {
 
 ```sql
     create table review (
-                            id int4 not null,
-                            text varchar(255),
-                            primary key (id)
+       id int4 not null,
+        text varchar(255),
+        primary key (id)
     )
 ```
 
@@ -162,38 +162,38 @@ public class Review {
 ## Test code - unidirectional
 ```java
     @Test
-@Transactional
+    @Transactional
     void test01() throws ExecutionException, InterruptedException {
         //GIVEN
         Iterable<Review> savedReviews = createReviews();
-    Product product = createProduct(savedReviews);
+        Product product = createProduct(savedReviews);
 
-    //WHEN
-    Optional<Product> byId = productRepository.findById(product.getId());
+        //WHEN
+        Optional<Product> byId = productRepository.findById(product.getId());
 
-    //THEN
-    byId.get().getReviews()
-    .forEach(Review::getText);
-
-    assertThat(reviews).hasSize(3);
+        //THEN
+        byId.get().getReviews()
+            .forEach(Review::getText);
+            
+        assertThat(reviews).hasSize(3);
     }
 
-private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
-    return CompletableFuture.supplyAsync(() -> {
-    Product item = new Product("item");
-    savedReviews.forEach(item::addReview);
-    return productRepository.save(item);
-    }, executor)
-    .get();
+    private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
+        return CompletableFuture.supplyAsync(() -> {
+                Product item = new Product("item");
+                savedReviews.forEach(item::addReview);
+                return productRepository.save(item);
+            }, executor)
+            .get();
     }
 
-private Iterable<Review> createReviews() throws InterruptedException, ExecutionException {
-    return CompletableFuture.supplyAsync(() -> reviewRepository.saveAll(List.of(
-    new Review("first review"),
-    new Review("second review"),
-    new Review("third review")
-    )), executor)
-    .get();
+    private Iterable<Review> createReviews() throws InterruptedException, ExecutionException {
+        return CompletableFuture.supplyAsync(() -> reviewRepository.saveAll(List.of(
+                new Review("first review"),
+                new Review("second review"),
+                new Review("third review")
+            )), executor)
+            .get();
     }
 ```
 
@@ -460,7 +460,7 @@ Transaction is commited and then we have query
 ```
 
 ## Conclusion
-Select is the same as when we used lining table. Difference is with missing linking table. This should inprove performace as we have one join less. Necessary data is stored on `Review` directly. To select `Product` and related objects we use two queries
+Select is the same as when we used linking table. Difference is with missing linking table. This should inprove performace as we have one join less. Necessary data is stored on `Review` directly. To select `Product` and related objects we use two queries
 Also on creatio of the `Product` we can see that we **update** `Review` not insert into linking table.
 
 Statistics

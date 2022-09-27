@@ -470,3 +470,127 @@ Statistics
     194543 nanoseconds spent preparing 2 JDBC statements;
     9282998 nanoseconds spent executing 2 JDBC statements;
 ```
+
+## Use `EAGER` and `LAZY` - bidirectional using join
+In the `Product` class, use the binding as below. Depending on `FetchType` use `EAGER` or `LAZY`
+```java
+    @OneToMany(
+        fetch = FetchType.EAGER,
+        mappedBy = "product",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
+    private Set<Review> reviews = new HashSet<>();
+
+```
+Additional mthods to bind `Product` with `Review`
+```java
+
+    public void addReview(Review review) {
+        reviews.add(review);
+        review.setProduct(this);
+    }
+
+    public void removeReview(Review review) {
+        reviews.remove(review);
+        review.setProduct(null);
+    }
+
+```
+To make bidirectional relation we have to add additional field on`Review`
+```java
+    @ManyToOne(fetch = FetchType.EAGER)
+    private Product product;
+```
+
+
+The sql code creates **additional column in related object**
+```sql
+    create table review (
+       id int4 not null,
+        text varchar(255),
+        product_id int4,
+        primary key (id)
+    )
+```
+
+## Test
+To make bidirectional mapping work `Review` and `Product` is created in one transaction
+```java
+        Product savedProduct = CompletableFuture.supplyAsync(() -> {
+            List<Review> reviews = List.of(
+                new Review("first review"),
+                new Review("second review"),
+                new Review("third review"));
+            Product product = new Product("item");
+            reviews.forEach(product::addReview);
+
+            productRepository.save(product);
+            return product;
+        }, executor).get();
+```
+
+## Generated query
+When we create product and attach reviews on it it create's query
+
+```sql
+    insert 
+    into
+        product
+        (name, id) 
+    values
+        (?, ?)
+```
+And **3** times:
+```sql
+    insert 
+    into
+        review
+        (product_id, text, id) 
+    values
+        (?, ?, ?)
+```
+Transaction is commited and then we have query
+for `EAGER`
+
+```java
+ select
+        product0_.id as id1_0_0_,
+        product0_.name as name2_0_0_,
+        reviews1_.product_id as product_3_1_1_,
+        reviews1_.id as id1_1_1_,
+        reviews1_.id as id1_1_2_,
+        reviews1_.product_id as product_3_1_2_,
+        reviews1_.text as text2_1_2_ 
+    from
+        product product0_ 
+    left outer join
+        review reviews1_ 
+            on product0_.id=reviews1_.product_id 
+    where
+        product0_.id=?
+```
+for `LAZY`
+```java
+  select
+        product0_.id as id1_0_0_,
+        product0_.name as name2_0_0_ 
+    from
+        product product0_ 
+    where
+        product0_.id=?
+```
+```java
+    select
+        reviews0_.product_id as product_3_1_0_,
+        reviews0_.id as id1_1_0_,
+        reviews0_.id as id1_1_1_,
+        reviews0_.product_id as product_3_1_1_,
+        reviews0_.text as text2_1_1_ 
+    from
+        review reviews0_ 
+    where
+        reviews0_.product_id=?
+```
+## Conclusion
+If we take a look at unidirectional and bidirectional mapping we can see that query from database perspective are the same. Bidirectional mapping gives us option to get `Product` from `Review` and code is slightly different so the performance is the same.

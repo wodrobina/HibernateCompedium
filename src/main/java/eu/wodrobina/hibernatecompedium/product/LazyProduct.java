@@ -23,7 +23,7 @@ public class LazyProduct {
     private String name;
 
     @OneToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "lazy_product_id")
     private Set<Review> reviews = new HashSet<>();
 
     protected LazyProduct() {

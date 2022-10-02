@@ -23,7 +23,7 @@ public class EagerProduct {
     private String name;
 
     @OneToMany(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "eager_product_id")
     private Set<Review> reviews = new HashSet<>();
 
     protected EagerProduct() {

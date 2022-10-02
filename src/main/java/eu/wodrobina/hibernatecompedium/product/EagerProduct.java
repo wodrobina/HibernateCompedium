@@ -9,13 +9,12 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 
 import eu.wodrobina.hibernatecompedium.review.Review;
 
 @Entity
-public class Product {
+public class EagerProduct {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -23,14 +22,14 @@ public class Product {
 
     private String name;
 
-    @OneToMany(fetch = FetchType.LAZY)
+    @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     private Set<Review> reviews = new HashSet<>();
 
-    protected Product() {
+    protected EagerProduct() {
     }
 
-    public Product(String name) {
+    public EagerProduct(String name) {
         this.name = name;
     }
 
@@ -63,10 +62,10 @@ public class Product {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Product)) {
+        if (!(o instanceof EagerProduct)) {
             return false;
         }
-        return id != null && id.equals(((Product) o).id);
+        return id != null && id.equals(((EagerProduct) o).id);
     }
 
     @Override

@@ -11,6 +11,8 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 
+import org.hibernate.annotations.BatchSize;
+
 import eu.wodrobina.hibernatecompedium.review.Review;
 
 @Entity
@@ -24,6 +26,7 @@ public class LazyProduct {
 
     @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "lazy_product_id")
+    @BatchSize(size = 2)
     private Set<Review> reviews = new HashSet<>();
 
     protected LazyProduct() {

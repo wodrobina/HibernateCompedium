@@ -11,6 +11,8 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 
+import org.hibernate.annotations.BatchSize;
+
 import eu.wodrobina.hibernatecompedium.review.Review;
 
 @Entity
@@ -24,6 +26,7 @@ public class EagerProduct {
 
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "eager_product_id")
+    @BatchSize(size = 999)
     private Set<Review> reviews = new HashSet<>();
 
     protected EagerProduct() {

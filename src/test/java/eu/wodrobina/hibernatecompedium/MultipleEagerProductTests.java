@@ -6,26 +6,26 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import eu.wodrobina.hibernatecompedium.product.Product;
-import eu.wodrobina.hibernatecompedium.product.ProductRepository;
+import eu.wodrobina.hibernatecompedium.product.EagerProduct;
+import eu.wodrobina.hibernatecompedium.product.EagerProductRepository;
 import eu.wodrobina.hibernatecompedium.review.Review;
 import eu.wodrobina.hibernatecompedium.review.ReviewRepository;
 
 @SpringBootTest
-class HibernateCompediumApplicationTests {
+class MultipleEagerProductTests {
 
     final ExecutorService executor = Executors.newFixedThreadPool(1);
 
     @Autowired
-    private ProductRepository productRepository;
+    private EagerProductRepository eagerProductRepository;
 
     @Autowired
     private ReviewRepository reviewRepository;
@@ -37,24 +37,39 @@ class HibernateCompediumApplicationTests {
 
     @Test
     @Transactional
-    void test01() throws ExecutionException, InterruptedException {
+    @DisplayName("Create products and then search all objects. Retrieve linked objects data")
+    void test03() throws ExecutionException, InterruptedException {
         //GIVEN
-        Iterable<Review> savedReviews = createReviews();
-        Product product = createProduct(savedReviews);
+        createEagerProduct(createReviews());
+        createEagerProduct(createReviews());
+        createEagerProduct(createReviews());
 
         //WHEN
-        Optional<Product> byId = productRepository.findById(product.getId());
+        Iterable<EagerProduct> all = eagerProductRepository.findAll();
 
         //THEN
-        byId.get().getReviews()
-            .forEach(Review::getText);
+        all.forEach(eagerProduct->eagerProduct.getReviews()
+            .forEach(Review::getText));
     }
 
-    private Product createProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
+    @Test
+    @Transactional
+    @DisplayName("Create products and then search all objects")
+    void test04() throws ExecutionException, InterruptedException {
+        //GIVEN
+        createEagerProduct(createReviews());
+        createEagerProduct(createReviews());
+        createEagerProduct(createReviews());
+
+        //WHEN//THEN
+        eagerProductRepository.findAll();
+    }
+
+    private EagerProduct createEagerProduct(Iterable<Review> savedReviews) throws InterruptedException, ExecutionException {
         return CompletableFuture.supplyAsync(() -> {
-                Product item = new Product("item");
+                EagerProduct item = new EagerProduct("item");
                 savedReviews.forEach(item::addReview);
-                return productRepository.save(item);
+                return eagerProductRepository.save(item);
             }, executor)
             .get();
     }
